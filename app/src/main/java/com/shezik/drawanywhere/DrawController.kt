@@ -103,6 +103,8 @@ class DrawController {
     val canClearPaths: StateFlow<Boolean> = _canClear.asStateFlow()
 
     fun updateLatestPath(newPoint: Offset) {
+        if (!this::penConfig.isInitialized)
+            throw IllegalStateException("PenConfig used without initialization!")
         if (penConfig.penType == PenType.StrokeEraser) {
             erasePath(newPoint)
             return
