@@ -19,6 +19,8 @@ package com.shezik.drawanywhere
 import android.content.Context
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import com.shezik.drawanywhere.model.PenConfig
+import com.shezik.drawanywhere.model.PenType
 import androidx.compose.ui.graphics.toArgb
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences

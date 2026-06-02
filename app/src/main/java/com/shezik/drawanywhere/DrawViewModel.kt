@@ -20,6 +20,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.shezik.drawanywhere.model.PenConfig
+import com.shezik.drawanywhere.model.PenType
+import com.shezik.drawanywhere.model.StrokeModifier
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -32,49 +35,40 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class ServiceState(
-    // Saved
     val toolbarPosition: Offset = Offset(32f, 64f),
-
-    // Not saved
     val positionValidated: Boolean = false,
     val toolbarActive: Boolean = true
 )
 
 data class UiState(
-    val canvasVisible: Boolean = true,  // Overridden on start by visibleOnStart in PreferencesManager
+    val canvasVisible: Boolean = true,
     val canvasPassthrough: Boolean = false,
     val autoClearCanvas: Boolean = false,
     val visibleOnStart: Boolean = true,
 
-    val currentPenType: PenType = PenType.Pen,  // This could be morphed into pen IDs later, if multiple pens with the same type is desired.
+    val currentPenType: PenType = PenType.Pen,
     val penConfigs: Map<PenType, PenConfig> = defaultPenConfigs(),
 
     val toolbarOrientation: ToolbarOrientation = ToolbarOrientation.HORIZONTAL,
     val firstDrawerOpen: Boolean = canvasVisible,
     val secondDrawerOpen: Boolean = false,
 
-    // Second drawer expand/collapse button is UI-specific, we don't (and shouldn't) see it here
-    // Buttons that don't appear in either drawer are "standalone"s, e.g. the visibility button
     val firstDrawerButtons: Set<String> = setOf(
         "undo", "clear", "tool_controls", "color_picker"
     ),
     val secondDrawerButtons: Set<String> = setOf(
         "passthrough", "redo", "settings"
     ),
-    // Buttons that stay in second drawer but do not collapse
     val secondDrawerPinnedButtons: Set<String> = emptySet()
 ) {
     val currentPenConfig: PenConfig
-        // New PenConfig is not added until modified
-        get() = penConfigs[currentPenType] ?: PenConfig()  // Triggering fallback would be weird. Creating a new tool?
+        get() = penConfigs[currentPenType] ?: PenConfig()
 }
 
 fun defaultPenConfigs(): Map<PenType, PenConfig> = mapOf(
     PenType.Pen to PenConfig(penType = PenType.Pen),
     PenType.StrokeEraser to PenConfig(penType = PenType.StrokeEraser, width = 50f)
 )
-
-
 
 @OptIn(FlowPreview::class)
 class DrawViewModel(
@@ -98,16 +92,11 @@ class DrawViewModel(
         controller.setPenConfig(initialUiState.currentPenConfig)
 
         _uiState
-            .onEach { state ->
-                preferencesMgr.saveUiState(state)
-            }
+            .onEach { state -> preferencesMgr.saveUiState(state) }
             .launchIn(viewModelScope)
 
         _uiState
-            .onEach { state ->
-                // TODO: Should we move pinned buttons logic here?
-                controller.setPenConfig(state.currentPenConfig)
-            }
+            .onEach { state -> controller.setPenConfig(state.currentPenConfig) }
             .launchIn(viewModelScope)
 
         resetToolbarTimer()
@@ -121,22 +110,19 @@ class DrawViewModel(
     fun switchToPen(type: PenType) =
         _uiState.update { it.copy(currentPenType = type) }
 
-    // TODO: Save to preferences, configurable
     fun resolvePenType(modifier: StrokeModifier) =
         when (modifier) {
             StrokeModifier.PrimaryButton   -> PenType.StrokeEraser
-            StrokeModifier.SecondaryButton -> PenType.StrokeEraser  // TODO
-            StrokeModifier.Both            -> PenType.StrokeEraser  // You might be experiencing a stroke
+            StrokeModifier.SecondaryButton -> PenType.StrokeEraser
+            StrokeModifier.Both            -> PenType.StrokeEraser
             StrokeModifier.None            -> uiState.value.currentPenType
         }
 
-
-
-    var previousPenType: PenType? = null
-    var isStrokeDown = false
+    private var previousPenType: PenType? = null
+    private var isStrokeDown: Boolean = false
 
     fun startStroke(point: Offset, modifier: StrokeModifier) {
-        finishStroke()  // Oh no! No multitouch! Who cares.
+        finishStroke()
 
         val newPenType = resolvePenType(modifier)
         if (newPenType != uiState.value.currentPenType) {
@@ -144,19 +130,19 @@ class DrawViewModel(
             switchToPen(newPenType)
         }
 
-        controller.createPath(point)
+        controller.createStroke(point)
         isStrokeDown = true
     }
 
     fun updateStroke(point: Offset) {
         if (!isStrokeDown) return
-        controller.updateLatestPath(point)
+        controller.updateLatestStroke(point)
     }
 
     fun finishStroke() {
         if (!isStrokeDown) return
 
-        controller.finishPath()
+        controller.finishStroke()
 
         previousPenType?.let {
             switchToPen(it)
@@ -165,31 +151,27 @@ class DrawViewModel(
         isStrokeDown = false
     }
 
-
-
     fun toggleCanvasVisibility() =
         setCanvasVisibility(!uiState.value.canvasVisible)
 
     fun setCanvasVisibility(visible: Boolean) {
-        var currentCanvasPassthrough = uiState.value.canvasPassthrough
+        var currentPassthrough = uiState.value.canvasPassthrough
         var currentPinned = uiState.value.secondDrawerPinnedButtons
 
         if (uiState.value.autoClearCanvas && !visible) {
             clearCanvas()
-            currentCanvasPassthrough = false
+            currentPassthrough = false
             currentPinned = getPinSecondDrawerButtonResult("passthrough", false)
         }
 
-        val currentFirstDrawerOpen = uiState.value.firstDrawerOpen
+        val currentFirstOpen = uiState.value.firstDrawerOpen
         _uiState.update { it.copy(
             canvasVisible = visible,
-            canvasPassthrough = currentCanvasPassthrough,
-            firstDrawerOpen = !currentFirstDrawerOpen,
+            canvasPassthrough = currentPassthrough,
+            firstDrawerOpen = !currentFirstOpen,
             secondDrawerPinnedButtons = currentPinned
         ) }
     }
-
-
 
     fun toggleCanvasPassthrough() =
         setCanvasPassthrough(!uiState.value.canvasPassthrough)
@@ -199,42 +181,38 @@ class DrawViewModel(
         _uiState.update { it.copy(canvasPassthrough = passthrough, secondDrawerPinnedButtons = newPinned) }
     }
 
-
-
     fun setPenColor(color: Color) =
         _uiState.update {
-            with (it) {
+            with(it) {
                 val newConfigs = penConfigs.toMutableMap()
-                val newPenConfig = newConfigs[currentPenType]?.copy(color = color)
+                val newConfig = newConfigs[currentPenType]?.copy(color = color)
                     ?: PenConfig(color = color, penType = currentPenType)
-                newConfigs[currentPenType] = newPenConfig
+                newConfigs[currentPenType] = newConfig
                 copy(penConfigs = newConfigs)
             }
         }
 
     fun setStrokeWidth(width: Float) =
         _uiState.update {
-            with (it) {
+            with(it) {
                 val newConfigs = penConfigs.toMutableMap()
-                val newPenConfig = newConfigs[currentPenType]?.copy(width = width)
+                val newConfig = newConfigs[currentPenType]?.copy(width = width)
                     ?: PenConfig(width = width, penType = currentPenType)
-                newConfigs[currentPenType] = newPenConfig
+                newConfigs[currentPenType] = newConfig
                 copy(penConfigs = newConfigs)
             }
         }
 
     fun setStrokeAlpha(alpha: Float) =
         _uiState.update {
-            with (it) {
+            with(it) {
                 val newConfigs = penConfigs.toMutableMap()
-                val newPenConfig = newConfigs[currentPenType]?.copy(alpha = alpha)
+                val newConfig = newConfigs[currentPenType]?.copy(alpha = alpha)
                     ?: PenConfig(alpha = alpha, penType = currentPenType)
-                newConfigs[currentPenType] = newPenConfig
+                newConfigs[currentPenType] = newConfig
                 copy(penConfigs = newConfigs)
             }
         }
-
-
 
     fun setToolbarPosition(position: Offset, validated: Boolean = false) =
         _serviceState.update { it.copy(toolbarPosition = position, positionValidated = validated) }
@@ -243,18 +221,12 @@ class DrawViewModel(
         setToolbarPosition(serviceState.value.toolbarPosition + offset)
 
     fun saveToolbarPosition() = viewModelScope.launch {
-        // THERE'S A LOTTA CONCURRENCY GOING ON HERE, BEWARE!
-        // We should be fine (FOR NOW) since the only value saved is toolbar position
         preferencesMgr.saveServiceState(serviceState.value)
     }
 
-
-
-    fun clearCanvas() = controller.clearPaths()
+    fun clearCanvas() = controller.clearStrokes()
     fun undo() = controller.undo()
     fun redo() = controller.redo()
-
-
 
     private var dimmingJob: Job? = null
 
@@ -262,15 +234,13 @@ class DrawViewModel(
         dimmingJob?.cancel()
         setToolbarActive(true)
         dimmingJob = viewModelScope.launch {
-            delay(3000L)  // 5 seconds
+            delay(3000L)  // 3 seconds
             setToolbarActive(false)
         }
     }
 
     fun setToolbarActive(state: Boolean) =
         _serviceState.update { it.copy(toolbarActive = state) }
-
-
 
     fun toggleToolbarOrientation() =
         setToolbarOrientation(
@@ -282,8 +252,6 @@ class DrawViewModel(
 
     fun setToolbarOrientation(orientation: ToolbarOrientation) =
         _uiState.update { it.copy(toolbarOrientation = orientation) }
-
-
 
     fun toggleFirstDrawer() =
         setFirstDrawerOpen(!uiState.value.firstDrawerOpen)
@@ -297,8 +265,6 @@ class DrawViewModel(
     fun setSecondDrawerOpen(state: Boolean) =
         _uiState.update { it.copy(secondDrawerOpen = state) }
 
-
-
     fun toggleSecondDrawerPinned(id: String) {
         val currentPinned = uiState.value.secondDrawerPinnedButtons
         pinSecondDrawerButton(id, !currentPinned.contains(id))
@@ -309,16 +275,9 @@ class DrawViewModel(
 
     private fun getPinSecondDrawerButtonResult(id: String, pinned: Boolean): Set<String> {
         val currentPinned = uiState.value.secondDrawerPinnedButtons
-        if (currentPinned.contains(id) == pinned)
-            return currentPinned
-
-        return if (pinned)
-            currentPinned + id
-        else
-            currentPinned - id
+        if (currentPinned.contains(id) == pinned) return currentPinned
+        return if (pinned) currentPinned + id else currentPinned - id
     }
-
-
 
     fun setAutoClearCanvas(state: Boolean) =
         _uiState.update { it.copy(autoClearCanvas = state) }

@@ -17,16 +17,16 @@ with this program. If not, see <https://www.gnu.org/licenses/>.
 package com.shezik.drawanywhere.view.canvas
 
 import android.content.Context
+import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
-import android.graphics.Canvas
 import android.view.MotionEvent
 import android.view.View
+import androidx.compose.ui.graphics.toArgb
 import com.shezik.drawanywhere.DrawController
 import com.shezik.drawanywhere.DrawViewModel
-import com.shezik.drawanywhere.PathWrapper
-import com.shezik.drawanywhere.StrokeModifier
-import androidx.compose.ui.graphics.toArgb
+import com.shezik.drawanywhere.model.DrawObject
+import com.shezik.drawanywhere.model.StrokeModifier
 
 class NativeDrawCanvasView(
     context: Context,
@@ -36,14 +36,9 @@ class NativeDrawCanvasView(
 
     var isPassthrough: Boolean = false
 
-    /** Called by external code when paths change outside of touch events
-     *  (e.g., undo/redo/clear from toolbar). */
-    var onPathsChanged: (() -> Unit)? = null
-
     private var activePointerId: Int = -1
     private var strokeInProgress: Boolean = false
 
-    // Reusable paint object for path rendering
     private val pathPaint = Paint().apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
@@ -55,18 +50,17 @@ class NativeDrawCanvasView(
         super.onDraw(canvas)
         // No background fill — overlay window is already TRANSLUCENT.
 
-        for (pw in drawController.pathList) {
-            if (pw.points.isEmpty()) continue
+        for (stroke in drawController.strokeList) {
+            if (stroke.points.isEmpty()) continue
 
-            val androidPath = buildAndroidPath(pw.points)
+            val androidPath = buildAndroidPath(stroke.points)
+            pathPaint.strokeWidth = stroke.width
 
-            pathPaint.strokeWidth = pw.width
-            // Combine color's intrinsic alpha with PathWrapper-level opacity.
-            // Paint.setAlpha() replaces (not multiplies) the color's alpha channel,
-            // so we pre-combine them into the ARGB color.
-            val colorArgb = pw.color.toArgb()
-            val colorAlpha = pw.color.alpha  // 0.0f..1.0f
-            val combinedAlpha = (colorAlpha * pw.alpha * 255).toInt().coerceIn(0, 255)
+            // Combine color's intrinsic alpha with stroke-level opacity.
+            // Paint.setAlpha() replaces (not multiplies) the alpha channel.
+            val colorArgb = stroke.color.toArgb()
+            val colorAlpha = stroke.color.alpha
+            val combinedAlpha = (colorAlpha * stroke.alpha * 255).toInt().coerceIn(0, 255)
             pathPaint.color = (colorArgb and 0x00FFFFFF) or (combinedAlpha shl 24)
 
             canvas.drawPath(androidPath, pathPaint)
@@ -79,7 +73,6 @@ class NativeDrawCanvasView(
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 activePointerId = event.getPointerId(0)
-
                 val modifier = detectStrokeModifier(event)
                 viewModel.startStroke(
                     point = androidx.compose.ui.geometry.Offset(event.x, event.y),
@@ -90,26 +83,15 @@ class NativeDrawCanvasView(
 
             MotionEvent.ACTION_MOVE -> {
                 if (!strokeInProgress) return false
+                val pi = event.findPointerIndex(activePointerId)
+                if (pi < 0) return false
 
-                val pointerIndex = event.findPointerIndex(activePointerId)
-                if (pointerIndex < 0) return false
-
-                // Process historical points first for smoother strokes
                 for (i in 0 until event.historySize) {
-                    viewModel.updateStroke(
-                        androidx.compose.ui.geometry.Offset(
-                            event.getHistoricalX(pointerIndex, i),
-                            event.getHistoricalY(pointerIndex, i)
-                        )
-                    )
+                    viewModel.updateStroke(androidx.compose.ui.geometry.Offset(
+                        event.getHistoricalX(pi, i), event.getHistoricalY(pi, i)))
                 }
-                // Process current point
-                viewModel.updateStroke(
-                    androidx.compose.ui.geometry.Offset(
-                        event.getX(pointerIndex),
-                        event.getY(pointerIndex)
-                    )
-                )
+                viewModel.updateStroke(androidx.compose.ui.geometry.Offset(
+                    event.getX(pi), event.getY(pi)))
                 invalidate()
             }
 
@@ -120,22 +102,15 @@ class NativeDrawCanvasView(
                 viewModel.finishStroke()
                 invalidate()
             }
-
-            MotionEvent.ACTION_POINTER_DOWN -> {
-                // Ignore additional pointers for now.
-                // Future: multi-touch zoom will be handled here.
-            }
         }
         return true
     }
 
     private fun detectStrokeModifier(event: MotionEvent): StrokeModifier {
-        if (event.getToolType(0) != MotionEvent.TOOL_TYPE_STYLUS) {
-            return StrokeModifier.None
-        }
-        val buttons = event.buttonState
-        val primary = (buttons and MotionEvent.BUTTON_STYLUS_PRIMARY) != 0
-        val secondary = (buttons and MotionEvent.BUTTON_STYLUS_SECONDARY) != 0
+        if (event.getToolType(0) != MotionEvent.TOOL_TYPE_STYLUS) return StrokeModifier.None
+        val b = event.buttonState
+        val primary = (b and MotionEvent.BUTTON_STYLUS_PRIMARY) != 0
+        val secondary = (b and MotionEvent.BUTTON_STYLUS_SECONDARY) != 0
         return when {
             primary && secondary -> StrokeModifier.Both
             primary -> StrokeModifier.PrimaryButton
@@ -144,25 +119,21 @@ class NativeDrawCanvasView(
         }
     }
 
-    private fun buildAndroidPath(points: List<androidx.compose.ui.geometry.Offset>): Path {
+    private fun buildAndroidPath(
+        points: List<androidx.compose.ui.geometry.Offset>
+    ): Path {
         val p = Path()
         if (points.isEmpty()) return p
-
         val first = points.first()
         p.moveTo(first.x, first.y)
-
         points.zipWithNext().forEachIndexed { index, (start, end) ->
-            val midX = (start.x + end.x) / 2f
-            val midY = (start.y + end.y) / 2f
-            if (index == 0) {
-                p.lineTo(midX, midY)
-            } else {
-                p.quadTo(start.x, start.y, midX, midY)
-            }
+            val mx = (start.x + end.x) / 2f
+            val my = (start.y + end.y) / 2f
+            if (index == 0) p.lineTo(mx, my)
+            else p.quadTo(start.x, start.y, mx, my)
         }
         val last = points.last()
         p.lineTo(last.x, last.y)
-
         return p
     }
 }

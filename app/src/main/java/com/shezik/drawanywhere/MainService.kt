@@ -16,10 +16,10 @@ with this program. If not, see <https://www.gnu.org/licenses/>.
 
 package com.shezik.drawanywhere
 
-import android.app.Service
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.PixelFormat
@@ -28,22 +28,22 @@ import android.os.Build
 import android.os.IBinder
 import android.view.Gravity
 import android.view.View
+import android.view.WindowInsets
 import android.view.WindowManager
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.ui.Modifier
+import android.view.WindowManager.LayoutParams
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.round
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
+import com.shezik.drawanywhere.lifecycle.ToolbarLifecycleOwner
+import com.shezik.drawanywhere.view.canvas.NativeDrawCanvasView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import android.view.WindowManager.LayoutParams
-import android.view.WindowInsets
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.unit.round
-import androidx.core.app.ServiceCompat
 
 class MainService : Service() {
     companion object {
@@ -51,50 +51,40 @@ class MainService : Service() {
         private const val CHANNEL_ID = "default_channel"
     }
 
-    private val customLifecycleOwner = CustomLifecycleOwner()
-    private lateinit var windowManager: WindowManager
-    private lateinit var canvasView: View
-    private lateinit var toolbarView: View
+    private val toolbarLifecycleOwner = ToolbarLifecycleOwner()
     private val drawController = DrawController()
-    private lateinit var preferencesMgr: PreferencesManager
+    private lateinit var windowManager: WindowManager
+    private lateinit var canvasView: NativeDrawCanvasView
+    private lateinit var toolbarView: ComposeView
+    private lateinit var preferencesManager: PreferencesManager
     private lateinit var viewModel: DrawViewModel
-    private var uiStateJob: Job? = null
-    private var serviceStateJob: Job? = null
+    private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     override fun onCreate() {
         super.onCreate()
 
-        preferencesMgr = PreferencesManager(this)
+        preferencesManager = PreferencesManager(this)
         val (initialUiState, initialServiceState) = runBlocking {
-            preferencesMgr.getSavedUiState() to preferencesMgr.getSavedServiceState()
+            preferencesManager.getSavedUiState() to preferencesManager.getSavedServiceState()
         }
         viewModel = DrawViewModel(
             controller = drawController,
-            preferencesMgr = preferencesMgr,
+            preferencesMgr = preferencesManager,
             initialUiState = initialUiState,
             initialServiceState = initialServiceState,
             stopService = { stopSelf() }
         )
 
-        customLifecycleOwner.onCreate()
-        customLifecycleOwner.onResume()
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-
         createNotificationChannel()
-        ServiceCompat.startForeground(this, NOTIFICATION_ID, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        ServiceCompat.startForeground(
+            this, NOTIFICATION_ID, createNotification(),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+        )
 
-        // -------- Setup canvas --------
-        canvasView = ComposeView(this).apply {
-            setContent {
-                DrawCanvas(
-                    modifier = Modifier.fillMaxSize()
-                        .stylusAwareDrawing(viewModel = viewModel),
-                    controller = drawController,
-                    backgroundColor = Color.Transparent
-                )
-            }
-        }
-        customLifecycleOwner.attachToDecorView(canvasView)
+        // -------- Setup native canvas --------
+        canvasView = NativeDrawCanvasView(this, drawController, viewModel)
+        drawController.onPathsChanged = { canvasView.invalidate() }
 
         val canvasParams = LayoutParams(
             LayoutParams.MATCH_PARENT,
@@ -102,21 +92,17 @@ class MainService : Service() {
             LayoutParams.TYPE_APPLICATION_OVERLAY,
             LayoutParams.FLAG_NOT_FOCUSABLE or
                     LayoutParams.FLAG_NOT_TOUCH_MODAL or
-//                    LayoutParams.FLAG_LAYOUT_NO_LIMITS or
                     LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         )
+        applyCanvasPassthrough(canvasParams, initialUiState.canvasPassthrough)
 
-        handleCanvasPassthrough(canvasParams, initialUiState)
-        // ------------------------------
-
-        // -------- Setup toolbar --------
+        // -------- Setup toolbar (Compose) --------
+        toolbarLifecycleOwner.start()
         toolbarView = ComposeView(this).apply {
-            setContent {
-                DrawToolbar(viewModel = viewModel)
-            }
+            setContent { DrawToolbar(viewModel = viewModel) }
         }
-        customLifecycleOwner.attachToDecorView(toolbarView)
+        toolbarLifecycleOwner.attachTo(toolbarView)
 
         val toolbarParams = LayoutParams(
             LayoutParams.WRAP_CONTENT,
@@ -124,101 +110,86 @@ class MainService : Service() {
             LayoutParams.TYPE_APPLICATION_OVERLAY,
             LayoutParams.FLAG_NOT_FOCUSABLE or
                     LayoutParams.FLAG_NOT_TOUCH_MODAL or
-//                    LayoutParams.FLAG_LAYOUT_NO_LIMITS or
                     LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
-        )
-        toolbarParams.gravity = Gravity.TOP or
-                Gravity.START
+        ).apply { gravity = Gravity.TOP or Gravity.START }
 
-        handleToolbarPosition(toolbarParams, initialServiceState, windowManager, toolbarView, viewModel)
-        // -------------------------------
+        applyToolbarPosition(toolbarParams, initialServiceState)
+        // ---------------------------------------
 
         windowManager.addView(canvasView, canvasParams)
         windowManager.addView(toolbarView, toolbarParams)
 
-        uiStateJob = CoroutineScope(Dispatchers.Main).launch {
-            viewModel.uiState.collect { state ->
-                handleCanvasPassthrough(canvasParams, state)
-                windowManager.updateViewLayout(canvasView, canvasParams)
+        // Defer toolbar position validation until layout is complete
+        toolbarView.post {
+            applyToolbarPosition(toolbarParams, viewModel.serviceState.value)
+            windowManager.updateViewLayout(toolbarView, toolbarParams)
+        }
 
-                canvasView.visibility = if (state.canvasVisible)
-                    View.VISIBLE else View.GONE
+        // Observe UI state changes
+        serviceScope.launch {
+            viewModel.uiState.collect { state ->
+                applyCanvasPassthrough(canvasParams, state.canvasPassthrough)
+                windowManager.updateViewLayout(canvasView, canvasParams)
+                canvasView.isPassthrough = state.canvasPassthrough
+                canvasView.visibility = if (state.canvasVisible) View.VISIBLE else View.GONE
             }
         }
 
-        serviceStateJob = CoroutineScope(Dispatchers.Main).launch {
+        // Observe service state changes
+        serviceScope.launch {
             viewModel.serviceState.collect { state ->
-                handleToolbarPosition(toolbarParams, state, windowManager, toolbarView, viewModel)
+                applyToolbarPosition(toolbarParams, state)
                 windowManager.updateViewLayout(toolbarView, toolbarParams)
 
                 val targetAlpha = if (state.toolbarActive) 1.0f else 0.5f
                 toolbarView.animate()
                     .alpha(targetAlpha)
-                    .setDuration(300)  // Animate alpha change over milliseconds
+                    .setDuration(300)
                     .start()
             }
         }
     }
 
-    private fun handleCanvasPassthrough(
-        canvasParams: LayoutParams,
-        state: UiState
-    ) {
-        canvasParams.flags = if (state.canvasPassthrough)
-            canvasParams.flags or LayoutParams.FLAG_NOT_TOUCHABLE
+    private fun applyCanvasPassthrough(params: LayoutParams, passthrough: Boolean) {
+        params.flags = if (passthrough)
+            params.flags or LayoutParams.FLAG_NOT_TOUCHABLE
         else
-            canvasParams.flags and LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+            params.flags and LayoutParams.FLAG_NOT_TOUCHABLE.inv()
     }
 
-    private fun handleToolbarPosition(
-        toolbarParams: LayoutParams,
-        state: ServiceState,
-        windowManager: WindowManager,
-        toolbarView: View,
-        viewModel: DrawViewModel
-    ) {
+    private fun applyToolbarPosition(params: LayoutParams, state: ServiceState) {
         val rounded = state.toolbarPosition.round()
-
-        if (state.positionValidated) {
-            toolbarParams.x = rounded.x
-            toolbarParams.y = rounded.y
-        } else {
-            val (screenWidth, screenHeight) = getUsableScreenSize(windowManager)
-            val coercedX = rounded.x.coerceIn(0, screenWidth - toolbarView.width)
-            val coercedY = rounded.y.coerceIn(0, screenHeight - toolbarView.height)
-            viewModel.setToolbarPosition(Offset(coercedX.toFloat(), coercedY.toFloat()), true)
-        }
+        val (screenWidth, screenHeight) = getUsableScreenSize(windowManager)
+        params.x = rounded.x.coerceIn(0, screenWidth - toolbarView.width)
+        params.y = rounded.y.coerceIn(0, screenHeight - toolbarView.height)
+        viewModel.setToolbarPosition(
+            Offset(params.x.toFloat(), params.y.toFloat()),
+            validated = true
+        )
     }
 
     @Suppress("DEPRECATION")
-    private fun getUsableScreenSize(windowManager: WindowManager): Pair<Int, Int> =
+    private fun getUsableScreenSize(wm: WindowManager): Pair<Int, Int> =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val windowMetrics = windowManager.maximumWindowMetrics
-            val insets = windowMetrics.windowInsets.getInsets(
-                WindowInsets.Type.navigationBars()
-            )
-            val bounds = windowMetrics.bounds
-            val usableWidth = bounds.width() - insets.left - insets.right
-            val usableHeight = bounds.height() - insets.top - insets.bottom
-            usableWidth to usableHeight
+            val metrics = wm.maximumWindowMetrics
+            val insets = metrics.windowInsets.getInsets(WindowInsets.Type.navigationBars())
+            val b = metrics.bounds
+            (b.width() - insets.left - insets.right) to (b.height() - insets.top - insets.bottom)
         } else {
-            val display = windowManager.defaultDisplay
             val size = Point()
-            display.getSize(size)
+            wm.defaultDisplay.getSize(size)
             size.x to size.y
         }
 
     override fun onDestroy() {
         super.onDestroy()
-        uiStateJob?.cancel()
-        serviceStateJob?.cancel()
+        serviceScope.cancel()
         if (::toolbarView.isInitialized && toolbarView.isAttachedToWindow)
             windowManager.removeView(toolbarView)
         if (::canvasView.isInitialized && canvasView.isAttachedToWindow)
             windowManager.removeView(canvasView)
-        customLifecycleOwner.onPause()
-        customLifecycleOwner.onDestroy()
+        toolbarLifecycleOwner.stop()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -232,12 +203,11 @@ class MainService : Service() {
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
-    private fun createNotification(): Notification {
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+    private fun createNotification(): Notification =
+        NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.app_name))
             .setSmallIcon(android.R.drawable.ic_menu_edit)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .build()
-    }
 }

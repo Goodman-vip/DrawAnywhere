@@ -24,6 +24,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import com.shezik.drawanywhere.model.PenType
+import com.shezik.drawanywhere.model.PenConfig
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -806,7 +808,7 @@ private fun ToolbarControls(
 }
 
 @Composable
-fun AboutScreen() {
+private fun AboutScreen() {
     Box(modifier = Modifier.padding(12.dp)) {  // Looks nice.
         Column(
             modifier = Modifier.fillMaxWidth(),
