@@ -19,6 +19,7 @@ package com.shezik.drawanywhere
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.geometry.Offset
+import com.shezik.drawanywhere.controller.UndoRedoManager
 import com.shezik.drawanywhere.model.DrawAction
 import com.shezik.drawanywhere.model.DrawObject
 import com.shezik.drawanywhere.model.PenConfig
@@ -34,26 +35,23 @@ class DrawController {
         penConfig = config
     }
 
-    /** Called whenever the path list is modified (add/remove/undo/redo/clear).
-     *  Wired by MainService to trigger NativeDrawCanvasView.invalidate(). */
     var onPathsChanged: (() -> Unit)? = null
 
     private val _strokeList = mutableStateListOf<DrawObject.Stroke>()
     val strokeList: List<DrawObject.Stroke>
         get() = _strokeList
 
-    private val maxUndoDepth = 50
-    private val undoStack = mutableListOf<DrawAction>()
-    private val redoStack = mutableListOf<DrawAction>()
-
-    private val _canUndo = MutableStateFlow(false)
-    val canUndo: StateFlow<Boolean> = _canUndo.asStateFlow()
-
-    private val _canRedo = MutableStateFlow(false)
-    val canRedo: StateFlow<Boolean> = _canRedo.asStateFlow()
+    private val undoRedo = UndoRedoManager()
+    val canUndo: StateFlow<Boolean> = undoRedo.canUndo
+    val canRedo: StateFlow<Boolean> = undoRedo.canRedo
 
     private val _canClear = MutableStateFlow(false)
     val canClearPaths: StateFlow<Boolean> = _canClear.asStateFlow()
+
+    private fun notifyChanged() {
+        updateClearPathsState()
+        onPathsChanged?.invoke()
+    }
 
     fun updateLatestStroke(newPoint: Offset) {
         if (!this::penConfig.isInitialized)
@@ -62,7 +60,6 @@ class DrawController {
             eraseStroke(newPoint)
             return
         }
-
         _strokeList.lastOrNull()?.let { stroke ->
             stroke.points.add(newPoint)
             stroke.invalidatePath()
@@ -72,12 +69,10 @@ class DrawController {
     fun createStroke(newPoint: Offset) {
         if (!this::penConfig.isInitialized)
             throw IllegalStateException("PenConfig used without initialization!")
-
         if (penConfig.penType == PenType.StrokeEraser) {
             eraseStroke(newPoint)
             return
         }
-
         _strokeList.add(DrawObject.Stroke(
             points = mutableStateListOf(newPoint),
             color = penConfig.color,
@@ -89,134 +84,97 @@ class DrawController {
     fun finishStroke() {
         if (penConfig.penType == PenType.StrokeEraser) return
         if (_strokeList.isEmpty()) return
-
         val latest = _strokeList.last()
-
         if (latest.points.isEmpty()) {
             _strokeList.removeAt(_strokeList.lastIndex)
             return
         }
-
-        redoStack.clear()
-        addToUndoStack(DrawAction.AddPath(latest))
-        updateUndoRedoState()
-        updateClearPathsState()
-        onPathsChanged?.invoke()
+        undoRedo.clearRedo()
+        undoRedo.push(DrawAction.AddPath(latest))
+        notifyChanged()
     }
 
     private fun eraseStroke(point: Offset) {
         val eraserRadius = penConfig.width / 2
         var indexToErase: Int? = null
-
         for (i in _strokeList.indices.reversed()) {
             val stroke = _strokeList[i]
-            val compensatedRadius = stroke.width / 2 + eraserRadius
-
+            val r = stroke.width / 2 + eraserRadius
             if (stroke.points.size > 1) {
                 stroke.points.zipWithNext().forEach { (p1, p2) ->
-                    if (distancePointToLineSegment(point, p1, p2) <= compensatedRadius) {
-                        indexToErase = i
-                        return@forEach
+                    if (distancePointToLineSegment(point, p1, p2) <= r) {
+                        indexToErase = i; return@forEach
                     }
                 }
             } else {
                 stroke.points.firstOrNull()?.let {
-                    if (distance(point, it) <= compensatedRadius) {
-                        indexToErase = i
-                    }
+                    if (distance(point, it) <= r) indexToErase = i
                 }
             }
             if (indexToErase != null) break
         }
-
         indexToErase?.let {
             val erased = _strokeList.removeAt(it)
-            addToUndoStack(DrawAction.ErasePath(erased))
+            undoRedo.push(DrawAction.ErasePath(erased))
             erased.releasePath()
-            redoStack.clear()
-            updateUndoRedoState()
-            updateClearPathsState()
-            onPathsChanged?.invoke()
+            undoRedo.clearRedo()
+            notifyChanged()
         }
     }
 
     fun clearStrokes() {
         if (_strokeList.isEmpty()) return
-
         _strokeList.forEach { it.releasePath() }
-        addToUndoStack(DrawAction.ClearPaths(_strokeList.toList()))
+        undoRedo.push(DrawAction.ClearPaths(_strokeList.toList()))
         _strokeList.clear()
-        redoStack.clear()
-        updateUndoRedoState()
-        updateClearPathsState()
-        onPathsChanged?.invoke()
-    }
-
-    private fun updateUndoRedoState() {
-        _canUndo.value = undoStack.isNotEmpty()
-        _canRedo.value = redoStack.isNotEmpty()
+        undoRedo.clearRedo()
+        notifyChanged()
     }
 
     private fun updateClearPathsState() {
         _canClear.value = _strokeList.isNotEmpty()
     }
 
-    private fun addToUndoStack(action: DrawAction) {
-        undoStack.add(action)
-        if (undoStack.size > maxUndoDepth) {
-            undoStack.removeAt(0)
-        }
-    }
-
     fun undo() {
-        if (undoStack.isEmpty()) return
-
-        val action = undoStack.removeAt(undoStack.lastIndex)
+        val action = undoRedo.popUndo() ?: return
         when (action) {
             is DrawAction.AddPath -> {
-                val s = action.stroke
-                if (_strokeList.remove(s)) {
-                    s.releasePath()
-                    redoStack.add(action)
+                if (_strokeList.remove(action.stroke)) {
+                    action.stroke.releasePath()
+                    undoRedo.pushRedo(action)
                 }
             }
             is DrawAction.ErasePath -> {
                 _strokeList.add(action.stroke)
-                redoStack.add(action)
+                undoRedo.pushRedo(action)
             }
             is DrawAction.ClearPaths -> {
                 _strokeList.addAll(action.strokes)
-                redoStack.add(action)
+                undoRedo.pushRedo(action)
             }
         }
-        updateUndoRedoState()
-        updateClearPathsState()
-        onPathsChanged?.invoke()
+        notifyChanged()
     }
 
     fun redo() {
-        if (redoStack.isEmpty()) return
-
-        val action = redoStack.removeAt(redoStack.lastIndex)
+        val action = undoRedo.popRedo() ?: return
         when (action) {
             is DrawAction.AddPath -> {
                 _strokeList.add(action.stroke)
-                addToUndoStack(action)
+                undoRedo.push(action)
             }
             is DrawAction.ErasePath -> {
                 if (_strokeList.remove(action.stroke)) {
                     action.stroke.releasePath()
-                    addToUndoStack(action)
+                    undoRedo.push(action)
                 }
             }
             is DrawAction.ClearPaths -> {
                 _strokeList.removeAll(action.strokes)
                 action.strokes.forEach { it.releasePath() }
-                addToUndoStack(action)
+                undoRedo.push(action)
             }
         }
-        updateUndoRedoState()
-        updateClearPathsState()
-        onPathsChanged?.invoke()
+        notifyChanged()
     }
 }
