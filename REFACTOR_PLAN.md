@@ -28,13 +28,15 @@
 
 ---
 
-### 步骤 0b：修复 `MainService.onCreate()` 中 `runBlocking` 阻塞主线程
+### 步骤 0b：`runBlocking` 经分析无需修改 ✅
 
 **文件**：`MainService.kt:68`
 
-**问题**：`runBlocking { preferencesMgr.getSavedUiState() to preferencesMgr.getSavedServiceState() }` 在 `onCreate`（主线程）阻塞等待 DataStore I/O，可能导致 ANR。
+**原分析**：担心 `runBlocking` 阻塞主线程导致 ANR。
 
-**方案**：用 `UiState()` 和 `ServiceState()` 默认值启动 ViewModel。然后在协程中异步加载已保存的状态，通过 `viewModel` 方法更新。
+**实际**：DataStore 读取几个 key-value 是本地文件读 protobuf，典型 < 5ms。Service ANR 阈值 5s。异步加载反而会导致 UI 先用默认值渲染再突变（canvas 跳变、toolbar 瞬移、颜色切换）—— 这是 visible flash，比 5ms 阻塞更差。
+
+**结论**：不修改。`runBlocking` 在这个场景是最合适的方案。
 
 ---
 
