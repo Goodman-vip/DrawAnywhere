@@ -67,7 +67,7 @@ val InkEraser24Px: ImageVector
                 lineTo(224f, 720f)
                 lineTo(486f, 720f)
                 close()
-            }.build()
+            }
         }.build()
 
         return _InkEraser24Px!!
