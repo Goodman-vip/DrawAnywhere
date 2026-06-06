@@ -1,15 +1,24 @@
-# <image src="SVG Icon/pen-new-square-original.svg" style="width: 2em; height: 2em; vertical-align: middle;" /> DrawAnywhere
+<div align="center">
+  <img src="SVG Icon/pen-new-square-original.svg" width="96"/>
+</div>
 
-English | [中文](README-zh-CN.md)
+<h1 align="center">DrawAnywhere</h1>
+
+<div align="center">
+  <a href="https://f-droid.org/packages/com.shezik.drawanywhere/">
+    <img src="https://img.shields.io/f-droid/v/com.shezik.drawanywhere" alt="Get it on F-Droid"/>
+  </a>
+  &nbsp;
+  <a href="https://shields.rbtlog.dev/com.shezik.drawanywhere">
+    <img src="https://shields.rbtlog.dev/simple/builders/com.shezik.drawanywhere" alt="RB shield"/>
+  </a>
+</div>
+
+&emsp;English | [中文](README-zh-CN.md)
 
 DrawAnywhere is an Android application that lets you draw on top of other apps.
 
 ![](metadata/en-US/images/featureGraphic.png)
-
-[<img src="https://img.shields.io/f-droid/v/com.shezik.drawanywhere"
-      alt="Get it on F-Droid">](https://f-droid.org/packages/com.shezik.drawanywhere/)
-[<img src="https://shields.rbtlog.dev/simple/builders/com.shezik.drawanywhere"
-      alt="RB shield">](https://shields.rbtlog.dev/com.shezik.drawanywhere)
 
 Or download the latest APK from the [Releases Section](https://github.com/shezik/DrawAnywhere/releases/latest).
 

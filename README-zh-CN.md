@@ -1,15 +1,24 @@
-# <image src="SVG Icon/pen-new-square-original.svg" style="width: 2em; height: 2em; vertical-align: middle;" /> DrawAnywhere
+<div align="center">
+  <img src="SVG Icon/pen-new-square-original.svg" width="96"/>
+</div>
 
-[English](README.md) | 中文
+<h1 align="center">DrawAnywhere</h1>
+
+<div align="center">
+  <a href="https://f-droid.org/packages/com.shezik.drawanywhere/">
+    <img src="https://img.shields.io/f-droid/v/com.shezik.drawanywhere" alt="Get it on F-Droid"/>
+  </a>
+  &nbsp;
+  <a href="https://shields.rbtlog.dev/com.shezik.drawanywhere">
+    <img src="https://shields.rbtlog.dev/simple/builders/com.shezik.drawanywhere" alt="RB shield"/>
+  </a>
+</div>
+
+&emsp;[English](README.md) | 中文
 
 DrawAnywhere 是一个可以让你在屏幕的任意地方上绘图的安卓软件。
 
 ![](metadata/zh-CN/images/featureGraphic.png)
-
-[<img src="https://img.shields.io/f-droid/v/com.shezik.drawanywhere"
-      alt="Get it on F-Droid">](https://f-droid.org/packages/com.shezik.drawanywhere/)
-[<img src="https://shields.rbtlog.dev/simple/builders/com.shezik.drawanywhere"
-      alt="RB shield">](https://shields.rbtlog.dev/com.shezik.drawanywhere)
 
 也可以在 [Releases 页面](https://github.com/shezik/DrawAnywhere/releases/latest) 下载最新 APK.
 
