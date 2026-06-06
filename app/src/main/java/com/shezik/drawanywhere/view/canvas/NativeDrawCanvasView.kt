@@ -38,6 +38,12 @@ class NativeDrawCanvasView(
 
     companion object {
         private const val FRAME_INTERVAL_MS = 16L          // ~60fps
+        private const val HUD_MARGIN_DP = 24f
+        private const val HUD_BOTTOM_OFFSET_PX = 48f
+        private const val HUD_PADDING_DP = 8f
+        private const val HUD_TEXT_SIZE_SP = 18f
+        private const val HUD_TEXT_COLOR = 0xCC_FFFFFF.toInt()
+        private const val HUD_BG_COLOR = 0x80_000000.toInt()
     }
 
     // ── Touch input (delegated) ───────────────────────────────────
@@ -84,10 +90,14 @@ class NativeDrawCanvasView(
     }
 
     private val hudPaint = Paint().apply {
-        color = 0xCC_FFFFFF.toInt()
-        textSize = 18f * context.resources.displayMetrics.density
+        color = HUD_TEXT_COLOR
+        textSize = HUD_TEXT_SIZE_SP * context.resources.displayMetrics.density
         isAntiAlias = true
-        setShadowLayer(4f, 0f, 1f, 0x88000000.toInt())
+    }
+
+    private val hudBgPaint = Paint().apply {
+        color = HUD_BG_COLOR
+        isAntiAlias = true
     }
 
     private val hoverPaint = Paint().apply {
@@ -162,7 +172,21 @@ class NativeDrawCanvasView(
             LockMode.ALL -> " 🔒"
         }
         if (label.isNotEmpty() || viewModel.lockMode.value != LockMode.NONE) {
-            canvas.drawText("$label$lockIcon", 24f, height - 48f, hudPaint)
+            val text = "$label$lockIcon"
+            val density = context.resources.displayMetrics.density
+            val textW = hudPaint.measureText(text)
+            val pad = HUD_PADDING_DP * density
+            val x = HUD_MARGIN_DP * density
+            val y = height - HUD_BOTTOM_OFFSET_PX
+            val fm = hudPaint.fontMetrics
+            val rect = android.graphics.RectF(
+                x - pad,
+                y + fm.ascent - pad,
+                x + textW + pad,
+                y + fm.descent + pad
+            )
+            canvas.drawRoundRect(rect, pad, pad, hudBgPaint)
+            canvas.drawText(text, x, y, hudPaint)
         }
 
         // Keep refreshing while ephemeral strokes are fading

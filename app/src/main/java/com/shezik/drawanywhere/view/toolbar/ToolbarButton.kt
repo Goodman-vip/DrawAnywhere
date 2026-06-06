@@ -6,6 +6,7 @@ import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
@@ -23,15 +24,18 @@ import com.shezik.drawanywhere.view.canvas.LockMode
 
 @Composable
 private fun LockZoomIcon() {
+    val tint = MaterialTheme.colorScheme.onSurface
     Box(contentAlignment = Alignment.Center) {
         Icon(
             Icons.Default.ZoomOutMap,
             contentDescription = null,
+            tint = tint,
             modifier = Modifier.fillMaxSize()
         )
         Icon(
             Icons.Default.Lock,
             contentDescription = null,
+            tint = tint,
             modifier = Modifier.size(14.dp)
         )
     }
