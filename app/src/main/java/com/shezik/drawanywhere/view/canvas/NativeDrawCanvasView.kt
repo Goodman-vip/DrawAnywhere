@@ -160,6 +160,7 @@ class NativeDrawCanvasView(
         super.onAttachedToWindow()
         viewportScope = CoroutineScope(Dispatchers.Main).apply {
             launch { viewModel.viewport.collect { invalidate() } }
+            launch { viewModel.lockMode.collect { invalidate() } }
         }
     }
 

@@ -5,13 +5,37 @@ import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.shezik.drawanywhere.R
 import com.shezik.drawanywhere.UiState
 import com.shezik.drawanywhere.model.PenType
+import com.shezik.drawanywhere.view.canvas.LockMode
+
+@Composable
+private fun LockZoomIcon() {
+    Box(contentAlignment = Alignment.Center) {
+        Icon(
+            Icons.Default.ZoomOutMap,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize()
+        )
+        Icon(
+            Icons.Default.Lock,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp)
+        )
+    }
+}
 
 internal data class ToolbarButton(
     val id: String,
@@ -20,7 +44,8 @@ internal data class ToolbarButton(
     val contentDescription: String,
     val isEnabled: Boolean = true,
     val onClick: (() -> Unit)? = null,
-    val popupPages: List<@Composable () -> Unit> = emptyList()
+    val popupPages: List<@Composable () -> Unit> = emptyList(),
+    val iconContent: (@Composable () -> Unit)? = null,
 ) {
     val hasPopup: Boolean
         get() = popupPages.isNotEmpty()
@@ -47,8 +72,8 @@ internal fun createAllToolbarButtons(
     onChangeVisibleOnStart: (Boolean) -> Unit,
     fingerDrawingEnabled: Boolean,
     onChangeFingerDrawingEnabled: (Boolean) -> Unit,
-    onToggleZoomLock: () -> Unit,
-    isZoomLocked: Boolean,
+    onCycleLockMode: () -> Unit,
+    lockMode: LockMode,
     onQuitApplication: () -> Unit
 ): List<ToolbarButton> = listOf(
     ToolbarButton(
@@ -97,10 +122,15 @@ internal fun createAllToolbarButtons(
     ),
     ToolbarButton(
         id = "zoom_lock",
-        icon = if (isZoomLocked) Icons.Default.Lock else Icons.Default.LockOpen,
-        contentDescription = if (isZoomLocked) stringResource(R.string.unlock_zoom) else stringResource(R.string.lock_zoom),
+        icon = if (lockMode == LockMode.NONE) Icons.Default.LockOpen else Icons.Default.Lock,
+        iconContent = if (lockMode == LockMode.ZOOM) {{ LockZoomIcon() }} else null,
+        contentDescription = when (lockMode) {
+            LockMode.NONE -> stringResource(R.string.lock_zoom)
+            LockMode.ZOOM -> stringResource(R.string.lock_all)
+            LockMode.ALL -> stringResource(R.string.unlock_all)
+        },
         isEnabled = uiState.canvasVisible,
-        onClick = onToggleZoomLock
+        onClick = onCycleLockMode
     ),
     ToolbarButton(
         id = "passthrough",

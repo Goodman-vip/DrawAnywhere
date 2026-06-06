@@ -83,11 +83,15 @@ internal fun AnimatedToolbarButton(modifier: Modifier, button: ToolbarButton) {
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .background(color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f), shape = CircleShape)
     ) {
-        Icon(
-            imageVector = button.icon,
-            contentDescription = button.contentDescription,
-            tint = if (button.isEnabled) iconColor else iconColor.copy(alpha = 0.4f)
-        )
+        if (button.iconContent != null) {
+            button.iconContent()
+        } else {
+            Icon(
+                imageVector = button.icon,
+                contentDescription = button.contentDescription,
+                tint = if (button.isEnabled) iconColor else iconColor.copy(alpha = 0.4f)
+            )
+        }
     }
 }
 
@@ -109,13 +113,17 @@ internal fun PopupToolbarButton(
                 shape = CircleShape
             )
         ) {
-            Icon(
-                imageVector = button.icon,
-                contentDescription = button.contentDescription,
-                tint = if (isPopupOpen) button.color ?: MaterialTheme.colorScheme.onPrimaryContainer
-                else if (button.isEnabled) button.color ?: MaterialTheme.colorScheme.onSurface
-                else (button.color ?: MaterialTheme.colorScheme.onSurface).copy(alpha = 0.4f)
-            )
+            if (button.iconContent != null) {
+                button.iconContent()
+            } else {
+                Icon(
+                    imageVector = button.icon,
+                    contentDescription = button.contentDescription,
+                    tint = if (isPopupOpen) button.color ?: MaterialTheme.colorScheme.onPrimaryContainer
+                    else if (button.isEnabled) button.color ?: MaterialTheme.colorScheme.onSurface
+                    else (button.color ?: MaterialTheme.colorScheme.onSurface).copy(alpha = 0.4f)
+                )
+            }
         }
         if (isPopupOpen && button.popupPages.isNotEmpty()) {
             val pagerState = rememberPagerState(initialPage = 0) { button.popupPages.size }
