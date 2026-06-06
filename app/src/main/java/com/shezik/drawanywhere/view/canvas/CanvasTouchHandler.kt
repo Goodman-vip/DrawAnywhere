@@ -82,6 +82,8 @@ class CanvasTouchHandler(
     private val TAG = "DrawTouch"
 
     private var activePointerId: Int = -1
+    // strokePending XOR strokeInProgress: pending during finger debounce (50ms),
+    // progress once committed. Both false when idle or in multi-touch.
     private var strokeInProgress: Boolean = false
     private var strokePending: Boolean = false
     private var pendingModifier: StrokeModifier = StrokeModifier.None

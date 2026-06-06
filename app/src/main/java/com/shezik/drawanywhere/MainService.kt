@@ -144,10 +144,10 @@ class MainService : Service() {
                 applyToolbarPosition(toolbarParams, state)
                 windowManager.updateViewLayout(toolbarView, toolbarParams)
 
-                val targetAlpha = if (state.toolbarActive) 1.0f else 0.5f
+                val targetAlpha = if (state.toolbarActive) 1.0f else DrawViewModel.TOOLBAR_DIM_ALPHA
                 toolbarView.animate()
                     .alpha(targetAlpha)
-                    .setDuration(300)
+                    .setDuration(DrawViewModel.TOOLBAR_DIM_DURATION_MS)
                     .start()
             }
         }

@@ -87,6 +87,11 @@ class DrawViewModel(
     initialServiceState: ServiceState,
     private val stopService: () -> Unit
 ) : ViewModel() {
+    companion object {
+        const val TOOLBAR_DIM_DELAY_MS = 3_000L
+        const val TOOLBAR_DIM_ALPHA = 0.5f
+        const val TOOLBAR_DIM_DURATION_MS = 300L
+    }
     private val _uiState = MutableStateFlow(initialUiState)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
@@ -242,7 +247,7 @@ class DrawViewModel(
         dimmingJob?.cancel()
         setToolbarActive(true)
         dimmingJob = viewModelScope.launch {
-            delay(3000L)  // 3 seconds
+            delay(TOOLBAR_DIM_DELAY_MS)
             setToolbarActive(false)
         }
     }

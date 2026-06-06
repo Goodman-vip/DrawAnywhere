@@ -120,7 +120,7 @@ private fun PresetsPage(
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurface
         )
-        val presets = remember { PRESET_COLORS }
+        val presets = PRESET_COLORS
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             presets.chunked(6).forEach { row ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.xs, Alignment.CenterHorizontally)) {

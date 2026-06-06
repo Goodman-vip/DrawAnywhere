@@ -58,7 +58,7 @@ class PreferencesManager(private val context: Context) {
     ): T {
         if (value == null) return defaultValue
         return try {
-            enumValueOf(value)
+            enumValueOf<T>(value)
         } catch (_: IllegalArgumentException) {
             defaultValue
         }

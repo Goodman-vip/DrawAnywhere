@@ -186,6 +186,7 @@ class NativeDrawCanvasView(
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         viewportScope?.cancel()
+        removeCallbacks(null)
     }
 
 }
