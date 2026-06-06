@@ -279,6 +279,10 @@ class CanvasTouchHandler(
         discardPendingStroke()
         cancelAnyStroke()
         isMultiTouch = true
+
+        // Fade out the hover circle immediately — it shouldn't stick during multi-touch
+        hoverState = hoverState?.copy(fadeStartTimeMs = System.currentTimeMillis())
+
         startMultiTouch(event)
         onInvalidate()
     }
