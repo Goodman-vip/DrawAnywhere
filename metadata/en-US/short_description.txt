@@ -1,1 +1,1 @@
-Floating canvas for drawing over other apps.
+Floating canvas for drawing, annotating, and highlighting over other apps.

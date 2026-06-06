@@ -1,0 +1,6 @@
+New tools: rectangle, ellipse, laser pointer, pixel eraser.
+HSV color picker with color wheel, presets, recent colors, and hex input.
+Three-level viewport lock (none, zoom only, all).
+Multi-finger tap gestures.
+Hover preview circle with fill and fade-out.
+Second-launch to close the service.

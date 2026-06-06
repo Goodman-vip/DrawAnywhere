@@ -1,14 +1,21 @@
-DrawAnywhere lets you sketch, annotate, and highlight directly on top of any screen. Great for following along video courses, recording tutorials or hosting presentations.
+DrawAnywhere lets you sketch, annotate, and highlight directly on top of any screen. Great for following along video courses, recording tutorials, or hosting presentations.
 
 Highlights:
-<ul><li>Stroke eraser toggleable via stylus buttons</li>
+<ul><li>Freehand, rectangle, ellipse, and laser pointer tools</li>
+    <li>Infinite canvas with pinch-to-zoom</li>
+    <li>Pixel eraser and stylus-button stroke eraser</li>
+    <li>Three-level viewport lock (none, zoom only, all)</li>
+    <li>HSV color picker with presets, recent colors, and hex input</li>
+    <li>50-step undo/redo</li>
     <li>Touch passthrough to the app below</li>
-    <li>50-step undo/redo operations</li>
-    <li>Minimal storage usage</li></ul>
+    <li>Hover preview circle showing brush size during drawing</li>
+    <li>Quick Settings tile to toggle the service</li></ul>
 Tips:
-<ul><li>Long press and drag to move the toolbar around.</li>
+<ul><li>Long press and drag to move the toolbar.</li>
+    <li>Two-finger pinch to zoom; double-tap to reset zoom; triple-tap to reset position.</li>
+    <li>Three-finger double-tap to toggle passthrough; triple-tap to hide canvas.</li>
     <li>After 3 seconds of inactivity, the toolbar becomes more transparent.</li>
-    <li>Turn on <tt>Clear on hiding canvas</tt> to let the app clear the canvas when you hide it.<br>
-Note: Touch passthrough will be turned off automatically as well.</li>
-    <li>Turn off <tt>Canvas visible on start</tt> to hide the canvas on startup by default.</li></ul>
-Source is available on GitHub: <a href="https://github.com/shezik/DrawAnywhere">https://github.com/shezik/DrawAnywhere</a>
+    <li>Turn on <tt>Clear canvas on hide</tt> to auto-clear when hiding the canvas.<br>
+Note: touch passthrough will be turned off automatically as well.</li>
+    <li>Turn off <tt>Open canvas on start</tt> to hide the canvas on startup.</li></ul>
+Source is available on GitHub: <a href="https://github.com/DrawAnywhere/DrawAnywhere">https://github.com/DrawAnywhere/DrawAnywhere</a>

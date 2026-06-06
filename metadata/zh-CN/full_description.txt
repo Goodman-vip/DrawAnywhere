@@ -1,14 +1,21 @@
 DrawAnywhere 让你可以在任何界面上进行绘画、标注和高亮。非常适合跟随视频课程、录制教程，或主持演示。
 
 亮点：
-<ul><li>笔画橡皮，可由手写笔按钮激活</li>
-    <li>操作画布下方的其他软件</li>
+<ul><li>自由画笔、矩形、椭圆和激光笔工具</li>
+    <li>无限画布，支持捏合缩放</li>
+    <li>像素橡皮和手写笔按键激活的笔画橡皮</li>
+    <li>三档画布锁定（无锁定、仅缩放、全部锁定）</li>
+    <li>HSV 取色器，支持预设色板、最近颜色和 Hex 输入</li>
     <li>50 步撤销/重做</li>
-    <li>低存储空间占用</li></ul>
+    <li>触摸透传到下方应用</li>
+    <li>Hover 预览圆圈，绘制时显示笔刷大小</li>
+    <li>Quick Settings 磁贴一键开关服务</li></ul>
 使用技巧：
 <ul><li>长按并拖动来移动工具栏。</li>
+    <li>双指捏合缩放；双击重置缩放；三击重置位置。</li>
+    <li>三指双击切换透传；三击隐藏画布。</li>
     <li>工具栏空闲 3 秒后变得透明。</li>
-    <li>启用<tt>隐藏画布时清空</tt>来在隐藏画布时将其清空。<br>
+    <li>启用<tt>隐藏画布时清空</tt>来在隐藏画布时自动清空。<br>
 提示：触摸透传也会被自动禁用。</li>
-    <li>禁用<tt>启动时显示画布</tt>来在软件启动时默认隐藏画布。</li></ul>
-源代码可在 GitHub 上获取：<a href="https://github.com/shezik/DrawAnywhere">https://github.com/shezik/DrawAnywhere</a>
+    <li>禁用<tt>启动时显示画布</tt>来在启动时默认隐藏画布。</li></ul>
+源代码可在 GitHub 上获取：<a href="https://github.com/DrawAnywhere/DrawAnywhere">https://github.com/DrawAnywhere/DrawAnywhere</a>
