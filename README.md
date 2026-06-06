@@ -27,10 +27,18 @@ Since v2.0, AI-generated content has been introduced. The decision was finally m
 
 ## 🎨 Features
 - Pretty toolbar UI based on Jetpack Compose, available in both horizontal and vertical mode
-- Stroke eraser, can be activated via stylus buttons
+- Freehand, rectangle, and ellipse drawing tools
+- Laser pointer with glow effect (auto-fades after 3 seconds)
+- Pixel eraser for precise erasing, plus stroke eraser activated via stylus buttons
+- Color picker with HSV wheel, preset swatches, recent colors, and hex code input
+- Hover preview circle visible during both stylus and finger drawing, with smooth fade-out
 - Undo and redo up to 50 operations
-- Quick Settings Tile to toggle DrawAnywhere service
+- Two-finger gestures: pinch-to-zoom, double-tap to reset zoom, triple-tap to reset position
+- Three-finger gestures: double-tap to toggle passthrough, triple-tap to hide canvas
+- Finger drawing toggle for stylus-only mode
 - Hide canvas, or pass down touch events to the app below
+- Quick Settings Tile to toggle the drawing service — tap again to close
+- Opening the app a second time closes it
 - It's free ~~real estate~~ software!
 
 ## ✨ Tips
