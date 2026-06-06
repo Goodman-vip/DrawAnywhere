@@ -96,6 +96,11 @@ class NativeDrawCanvasView(
         isAntiAlias = true
     }
 
+    private val hoverFillPaint = Paint().apply {
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
@@ -123,10 +128,24 @@ class NativeDrawCanvasView(
             } else 1f
 
             if (alpha > 0f) {
-                hoverPaint.alpha = (255 * alpha).toInt()
-                hoverPaint.color = (config.color.toArgb() and 0x00FFFFFF) or (hoverPaint.alpha shl 24)
+                val penColor = config.color
+                val penAlpha = config.alpha
+                val rgb = penColor.toArgb() and 0x00FFFFFF
+                val colorAlpha = (penColor.toArgb() ushr 24) and 0xFF
+
+                val outlineAlpha = (alpha * (colorAlpha / 255f) * penAlpha * 255).toInt().coerceIn(0, 255)
+                val fillAlpha = (outlineAlpha / 2).coerceIn(0, 255)
+
+                hoverFillPaint.alpha = fillAlpha
+                hoverFillPaint.color = rgb or (fillAlpha shl 24)
+                hoverPaint.alpha = outlineAlpha
+                hoverPaint.color = rgb or (outlineAlpha shl 24)
+
                 val screenR = (config.width * vp.zoom - hoverPaint.strokeWidth) / 2f
-                if (screenR > 0f) canvas.drawCircle(state.point.x, state.point.y, screenR, hoverPaint)
+                if (screenR > 0f) {
+                    canvas.drawCircle(state.point.x, state.point.y, screenR, hoverFillPaint)
+                    canvas.drawCircle(state.point.x, state.point.y, screenR, hoverPaint)
+                }
             }
 
             if (state.isFading && alpha > 0f) {
