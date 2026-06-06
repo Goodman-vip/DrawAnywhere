@@ -36,6 +36,10 @@ class NativeDrawCanvasView(
     private val viewModel: DrawViewModel,
 ) : View(context) {
 
+    companion object {
+        private const val FRAME_INTERVAL_MS = 16L          // ~60fps
+    }
+
     // ── Touch input (delegated) ───────────────────────────────────
 
     private val touchHandler = CanvasTouchHandler(
@@ -109,11 +113,25 @@ class NativeDrawCanvasView(
         canvas.restore()
 
         // ── Hover size preview (screen space, constant border) ────
-        touchHandler.hoverPoint?.let { pt ->
+        touchHandler.hoverState?.let { state ->
             val config = viewModel.uiState.value.currentPenConfig
-            hoverPaint.color = config.color.toArgb()
-            val screenR = (config.width * vp.zoom - hoverPaint.strokeWidth) / 2f
-            if (screenR > 0f) canvas.drawCircle(pt.x, pt.y, screenR, hoverPaint)
+            val now = System.currentTimeMillis()
+
+            val alpha = if (state.isFading) {
+                val elapsed = now - state.fadeStartTimeMs - state.delayMs
+                (1f - elapsed / state.fadeMs.toFloat()).coerceIn(0f, 1f)
+            } else 1f
+
+            if (alpha > 0f) {
+                hoverPaint.alpha = (255 * alpha).toInt()
+                hoverPaint.color = (config.color.toArgb() and 0x00FFFFFF) or (hoverPaint.alpha shl 24)
+                val screenR = (config.width * vp.zoom - hoverPaint.strokeWidth) / 2f
+                if (screenR > 0f) canvas.drawCircle(state.point.x, state.point.y, screenR, hoverPaint)
+            }
+
+            if (state.isFading && alpha > 0f) {
+                postInvalidateDelayed(FRAME_INTERVAL_MS)
+            }
         }
 
         // ── Zoom HUD ─────────────────────────────────────────────
@@ -126,7 +144,7 @@ class NativeDrawCanvasView(
 
         // Keep refreshing while ephemeral strokes are fading
         if (drawController.strokeList.any { it.penType.isEphemeral }) {
-            postInvalidateDelayed(100)
+            postInvalidateDelayed(FRAME_INTERVAL_MS)
         }
     }
 

@@ -23,6 +23,26 @@ import com.shezik.drawanywhere.DrawViewModel
 import com.shezik.drawanywhere.model.StrokeModifier
 import kotlin.math.sqrt
 
+private const val FINGER_HOVER_DELAY_MS = 300L
+private const val STYLUS_HOVER_DELAY_MS = 0L
+private const val HOVER_FADE_MS = 200L
+
+/**
+ * @param point Current or last-known pointer position.
+ * @param fadeStartTimeMs Timestamp when fade-out began; 0 = still tracking (full opacity).
+ * @param delayMs Pause before fading begins (finger: [FINGER_HOVER_DELAY_MS]; stylus: [STYLUS_HOVER_DELAY_MS]).
+ * @param fadeMs Fade-out duration; set to 0 for instant off (debug).
+ */
+internal data class HoverState(
+    val point: Offset,
+    val fadeStartTimeMs: Long = 0L,
+    val delayMs: Long = STYLUS_HOVER_DELAY_MS,
+    val fadeMs: Long = HOVER_FADE_MS,
+) {
+    val isFading: Boolean get() = fadeStartTimeMs > 0L
+    val isVisible: Boolean get() = !isFading || fadeMs > 0L
+}
+
 /**
  * Touch dispatch for the drawing canvas. Routes [MotionEvent] into:
  *
@@ -132,24 +152,35 @@ class CanvasTouchHandler(
     //  Public entry point
     // ═══════════════════════════════════════════════════════════════
 
-    /** Current pointer position for size preview; null when not hovering. */
-    var hoverPoint: Offset? = null
+    /** Current hover state for size preview; null when not showing. */
+    internal var hoverState: HoverState? = null
         private set
 
     fun handleEvent(event: MotionEvent): Boolean {
-        // Track pointer position for size preview (stylus/mouse only)
+        // Track pointer position for size preview
         when (event.actionMasked) {
             MotionEvent.ACTION_MOVE -> {
-                if (event.pointerCount == 1 && event.getToolType(0) != MotionEvent.TOOL_TYPE_FINGER) {
-                    hoverPoint = Offset(event.x, event.y)
+                if (event.pointerCount == 1) {
+                    val delayMs = if (event.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER)
+                        FINGER_HOVER_DELAY_MS else STYLUS_HOVER_DELAY_MS
+                    hoverState = HoverState(Offset(event.x, event.y), delayMs = delayMs)
                 }
             }
             MotionEvent.ACTION_HOVER_MOVE -> {
-                hoverPoint = Offset(event.x, event.y)
+                hoverState = HoverState(Offset(event.x, event.y), delayMs = STYLUS_HOVER_DELAY_MS)
+                onInvalidate()
+            }
+            MotionEvent.ACTION_UP,
+            MotionEvent.ACTION_CANCEL -> {
+                hoverState?.let { s ->
+                    hoverState = s.copy(fadeStartTimeMs = System.currentTimeMillis())
+                }
                 onInvalidate()
             }
             MotionEvent.ACTION_HOVER_EXIT -> {
-                hoverPoint = null
+                hoverState?.let { s ->
+                    hoverState = s.copy(fadeStartTimeMs = System.currentTimeMillis(), delayMs = STYLUS_HOVER_DELAY_MS)
+                }
                 onInvalidate()
             }
         }
