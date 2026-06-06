@@ -49,6 +49,8 @@ class MainService : Service() {
     companion object {
         private const val NOTIFICATION_ID = 100
         private const val CHANNEL_ID = "default_channel"
+        var isRunning: Boolean = false
+            private set
     }
 
     private val toolbarLifecycleOwner = ToolbarLifecycleOwner()
@@ -149,6 +151,8 @@ class MainService : Service() {
                     .start()
             }
         }
+
+        isRunning = true
     }
 
     private fun applyCanvasPassthrough(params: LayoutParams, passthrough: Boolean) {
@@ -183,6 +187,7 @@ class MainService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        isRunning = false
         serviceScope.cancel()
         if (::toolbarView.isInitialized && toolbarView.isAttachedToWindow)
             windowManager.removeView(toolbarView)

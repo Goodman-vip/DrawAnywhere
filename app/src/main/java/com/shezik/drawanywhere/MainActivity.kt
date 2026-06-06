@@ -27,6 +27,11 @@ class MainActivity : Activity() {
         super.onResume()
 
         if (Settings.canDrawOverlays(this)) {
+            if (MainService.isRunning) {
+                stopService(Intent(this@MainActivity, MainService::class.java))
+                finish()
+                return
+            }
             val intent = Intent(this@MainActivity, MainService::class.java)
             startForegroundService(intent)
             finish()

@@ -53,14 +53,14 @@
 
 ### 平台 / 窗口
 - [ ] DeX 模式下外接显示器绘制
-- [ ] 软件运行时再次打开软件则退出
+- [x] 软件运行时再次打开软件则退出
 - [ ] 覆盖层窗口大小适配（取色器、设置等 popup 受 WRAP_CONTENT 限制）
 
 ### 像素橡皮扩展
 - [ ] 支持 Rectangle / Ellipse（边缘轮廓采样）
 
-### 待修
-- [ ] `ToolbarLifecycleOwner` 补齐 ON_START / ON_RESUME 生命周期回调
+### 待修（低优先级）
+- [ ] `ToolbarLifecycleOwner` 补齐 ON_START / ON_RESUME 生命周期回调（当前无 Observer，无实际影响）
 
 ---
 

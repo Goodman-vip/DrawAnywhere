@@ -14,7 +14,7 @@ class DrawAnywhereTileService: TileService(){
         super.onClick()
         val serviceIntent = Intent(this, MainService::class.java)
 
-        if (isServiceRunning) {
+        if (MainService.isRunning) {
             stopService(serviceIntent)
             qsTile.state = Tile.STATE_INACTIVE
         } else {
@@ -39,14 +39,9 @@ class DrawAnywhereTileService: TileService(){
         qsTile.updateTile()
     }
 
-    private val isServiceRunning: Boolean
-        get() = MainService::class.java.name in (getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager)
-            .getRunningServices(Int.MAX_VALUE)
-            .map { it.service.className }
-
     override fun onStartListening() {
         super.onStartListening()
-        qsTile.state = if (isServiceRunning) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
+        qsTile.state = if (MainService.isRunning) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
         qsTile.updateTile()
     }
 
