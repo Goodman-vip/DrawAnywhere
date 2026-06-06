@@ -134,7 +134,7 @@ internal fun CheckboxControl(
     description: String? = null
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.sm),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {

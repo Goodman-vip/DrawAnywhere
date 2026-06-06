@@ -46,17 +46,17 @@ class NativeDrawCanvasView(
         viewModel = viewModel,
         onInvalidate = { invalidate() },
         onTwoFingerDoubleTap = {
-            if (!viewModel.viewport.value.zoomLocked) {
+            if (viewModel.lockMode.value == LockMode.NONE) {
                 viewModel.resetViewport(Offset(width / 2f, height / 2f))
             }
         },
         onTwoFingerTripleTap = {
-            val zoomLocked = viewModel.viewport.value.zoomLocked
-            val vp = if (zoomLocked)
-                CanvasViewport(zoom = viewModel.viewport.value.zoom, zoomLocked = true)
-            else
-                CanvasViewport()
-            viewModel.setViewport(vp)
+            val lm = viewModel.lockMode.value
+            when (lm) {
+                LockMode.NONE -> viewModel.setViewport(CanvasViewport())
+                LockMode.ZOOM -> viewModel.setViewport(CanvasViewport(zoom = viewModel.viewport.value.zoom))
+                LockMode.ALL -> {}  // ignored
+            }
         },
         onThreeFingerDoubleTap = { viewModel.toggleCanvasPassthrough() },
         onThreeFingerTripleTap = { viewModel.setCanvasVisibility(false) },
@@ -137,8 +137,12 @@ class NativeDrawCanvasView(
         // ── Zoom HUD ─────────────────────────────────────────────
         val zoomPct = (vp.zoom * 100).toInt()
         val label = if (zoomPct == 100) "" else "${zoomPct}%"
-        val lockIcon = if (vp.zoomLocked) " 🔒" else ""
-        if (label.isNotEmpty() || vp.zoomLocked) {
+        val lockIcon = when (viewModel.lockMode.value) {
+            LockMode.NONE -> ""
+            LockMode.ZOOM -> " 🔒🔍"
+            LockMode.ALL -> " 🔒"
+        }
+        if (label.isNotEmpty() || viewModel.lockMode.value != LockMode.NONE) {
             canvas.drawText("$label$lockIcon", 24f, height - 48f, hudPaint)
         }
 

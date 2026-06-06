@@ -99,7 +99,7 @@ class CanvasTouchHandler(
     private var multiTouchStartPanX: Float = 0f
     private var multiTouchStartPanY: Float = 0f
     private var multiTouchStartZoom: Float = 1f
-    private var multiTouchStartZoomLocked: Boolean = false
+    private var multiTouchStartLockMode: LockMode = LockMode.NONE
 
     // ═══════════════════════════════════════════════════════════════
     //  Tap detection (delegated)
@@ -250,7 +250,6 @@ class CanvasTouchHandler(
             zoom = multiTouchStartZoom,
             panX = multiTouchStartPanX,
             panY = multiTouchStartPanY,
-            zoomLocked = multiTouchStartZoomLocked,
         ))
     }
 
@@ -413,7 +412,7 @@ class CanvasTouchHandler(
         multiTouchStartPanX = vp.panX
         multiTouchStartPanY = vp.panY
         multiTouchStartZoom = vp.zoom
-        multiTouchStartZoomLocked = vp.zoomLocked
+        multiTouchStartLockMode = viewModel.lockMode.value
     }
 
     private fun handleMultiTouchMove(event: MotionEvent) {
@@ -426,15 +425,15 @@ class CanvasTouchHandler(
         val panDx = curMidX - multiTouchStartMid.first
         val panDy = curMidY - multiTouchStartMid.second
 
-        var vp = CanvasViewport(
+        val startVp = CanvasViewport(
             zoom = multiTouchStartZoom,
-            panX = multiTouchStartPanX - panDx / multiTouchStartZoom,
-            panY = multiTouchStartPanY - panDy / multiTouchStartZoom,
-            zoomLocked = viewModel.viewport.value.zoomLocked,
+            panX = multiTouchStartPanX,
+            panY = multiTouchStartPanY,
         )
+        var vp = if (multiTouchStartLockMode != LockMode.ALL) startVp.pan(panDx, panDy) else startVp
 
         val curDist = sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0))
-        if (multiTouchStartDist > 0f) {
+        if (multiTouchStartDist > 0f && multiTouchStartLockMode == LockMode.NONE) {
             val zoomFactor = curDist / multiTouchStartDist
             vp = vp.zoomAt(zoomFactor, Offset(curMidX, curMidY))
         }
