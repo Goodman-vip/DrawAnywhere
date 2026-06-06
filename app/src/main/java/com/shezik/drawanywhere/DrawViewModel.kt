@@ -24,6 +24,7 @@ import com.shezik.drawanywhere.model.PenConfig
 import com.shezik.drawanywhere.model.PenType
 import com.shezik.drawanywhere.model.StrokeModifier
 import com.shezik.drawanywhere.view.canvas.CanvasViewport
+import com.shezik.drawanywhere.view.canvas.LockMode
 import com.shezik.drawanywhere.view.toolbar.ToolbarOrientation
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -94,6 +95,9 @@ class DrawViewModel(
 
     private val _viewport = MutableStateFlow(CanvasViewport())
     val viewport: StateFlow<CanvasViewport> = _viewport.asStateFlow()
+
+    private val _lockMode = MutableStateFlow(LockMode.NONE)
+    val lockMode: StateFlow<LockMode> = _lockMode.asStateFlow()
 
     val canUndo: StateFlow<Boolean> = controller.canUndo
     val canRedo: StateFlow<Boolean> = controller.canRedo
@@ -298,8 +302,18 @@ class DrawViewModel(
         _viewport.value = viewport
     }
 
-    fun toggleZoomLock() {
-        _viewport.update { it.withZoomLock(!it.zoomLocked) }
+    fun cycleLockMode() {
+        _lockMode.update { current ->
+            when (current) {
+                LockMode.NONE -> LockMode.ZOOM
+                LockMode.ZOOM -> LockMode.ALL
+                LockMode.ALL -> LockMode.NONE
+            }
+        }
+    }
+
+    fun setLockMode(mode: LockMode) {
+        _lockMode.value = mode
     }
 
     fun resetViewport(screenCenter: Offset) {

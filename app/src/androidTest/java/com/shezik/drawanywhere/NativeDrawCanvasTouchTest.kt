@@ -4,6 +4,7 @@ import android.view.MotionEvent
 import androidx.test.platform.app.InstrumentationRegistry
 import com.shezik.drawanywhere.model.PenConfig
 import com.shezik.drawanywhere.view.canvas.CanvasViewport
+import com.shezik.drawanywhere.view.canvas.LockMode
 import com.shezik.drawanywhere.view.canvas.NativeDrawCanvasView
 import org.junit.Assert.*
 import org.junit.Test
@@ -150,7 +151,8 @@ class NativeDrawCanvasTouchTest {
     @Test
     fun twoFingerDoubleTapIgnoredWhenZoomLocked() {
         val (_, view, vm) = setupWithViewModel()
-        vm.setViewport(CanvasViewport(panX = 200f, panY = -100f, zoom = 3f, zoomLocked = true))
+        vm.setViewport(CanvasViewport(panX = 200f, panY = -100f, zoom = 3f))
+        vm.setLockMode(LockMode.ZOOM)
 
         var t = System.currentTimeMillis()
         simulateTwoFingerTap(view, t, 100f, 200f, 300f, 200f)
@@ -181,7 +183,8 @@ class NativeDrawCanvasTouchTest {
     @Test
     fun twoFingerTripleTapKeepsZoomWhenLocked() {
         val (_, view, vm) = setupWithViewModel()
-        vm.setViewport(CanvasViewport(panX = 200f, panY = -100f, zoom = 3f, zoomLocked = true))
+        vm.setViewport(CanvasViewport(panX = 200f, panY = -100f, zoom = 3f))
+        vm.setLockMode(LockMode.ZOOM)
 
         var t = System.currentTimeMillis()
         simulateTwoFingerTap(view, t, 100f, 200f, 300f, 200f)
@@ -193,7 +196,7 @@ class NativeDrawCanvasTouchTest {
         assertEquals(0f, vm.viewport.value.panX, 0.01f)
         assertEquals(0f, vm.viewport.value.panY, 0.01f)
         assertEquals(3f, vm.viewport.value.zoom, 0.01f)     // zoom preserved
-        assertTrue(vm.viewport.value.zoomLocked)             // lock preserved
+        assertEquals(LockMode.ZOOM, vm.lockMode.value)       // lock preserved
     }
 
     // ═══════════════════════════════════════════════════════════════

@@ -7,7 +7,6 @@ data class CanvasViewport(
     val zoom: Float = 1f,
     val panX: Float = 0f,
     val panY: Float = 0f,
-    val zoomLocked: Boolean = false,
 ) {
     companion object {
         const val MIN_ZOOM = 0.01f
@@ -23,10 +22,8 @@ data class CanvasViewport(
         copy(panX = panX - dx / zoom, panY = panY - dy / zoom)
 
     fun zoomAt(factor: Float, pivot: Offset): CanvasViewport {
-        if (zoomLocked) return this
         val newZoom = (zoom * factor).coerceAtLeast(MIN_ZOOM)
         if (abs(newZoom - zoom) < 1e-6f) return this
-        // Keep the point under the pivot fixed in screen space
         val worldPivot = screenToWorld(pivot)
         return copy(
             zoom = newZoom,
@@ -43,6 +40,4 @@ data class CanvasViewport(
             panY = worldCenter.y - screenCenter.y
         )
     }
-
-    fun withZoomLock(locked: Boolean): CanvasViewport = copy(zoomLocked = locked)
 }
