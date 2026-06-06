@@ -130,10 +130,9 @@ class NativeDrawCanvasView(
         // ── Hover size preview (screen space, constant border) ────
         touchHandler.hoverState?.let { state ->
             val config = viewModel.uiState.value.currentPenConfig
-            val now = System.currentTimeMillis()
 
             val alpha = if (state.isFading) {
-                val elapsed = now - state.fadeStartTimeMs - state.delayMs
+                val elapsed = System.currentTimeMillis() - state.fadeStartTimeMs - state.delayMs
                 (1f - elapsed / state.fadeMs.toFloat()).coerceIn(0f, 1f)
             } else 1f
 
@@ -174,7 +173,6 @@ class NativeDrawCanvasView(
         if (label.isNotEmpty() || viewModel.lockMode.value != LockMode.NONE) {
             val text = "$label$lockIcon"
             val density = context.resources.displayMetrics.density
-            val textW = hudPaint.measureText(text)
             val pad = HUD_PADDING_DP * density
             val x = HUD_MARGIN_DP * density
             val y = height - HUD_BOTTOM_OFFSET_PX
@@ -182,7 +180,7 @@ class NativeDrawCanvasView(
             val rect = android.graphics.RectF(
                 x - pad,
                 y + fm.ascent - pad,
-                x + textW + pad,
+                x + hudPaint.measureText(text) + pad,
                 y + fm.descent + pad
             )
             canvas.drawRoundRect(rect, pad, pad, hudBgPaint)

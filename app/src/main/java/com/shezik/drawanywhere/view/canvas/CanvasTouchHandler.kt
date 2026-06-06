@@ -163,9 +163,9 @@ class CanvasTouchHandler(
         when (event.actionMasked) {
             MotionEvent.ACTION_MOVE -> {
                 if (event.pointerCount == 1) {
-                    val delayMs = if (event.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER)
-                        FINGER_HOVER_DELAY_MS else STYLUS_HOVER_DELAY_MS
-                    hoverState = HoverState(Offset(event.x, event.y), delayMs = delayMs)
+                    hoverState = HoverState(Offset(event.x, event.y),
+                        delayMs = if (event.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER)
+                            FINGER_HOVER_DELAY_MS else STYLUS_HOVER_DELAY_MS)
                 }
             }
             MotionEvent.ACTION_HOVER_MOVE -> {
@@ -312,8 +312,9 @@ class CanvasTouchHandler(
         tapDetector.cancelPending()
 
         activePointerId = event.getPointerId(0)
-        val toolType = event.getToolType(0)
-        val isStylus = toolType == MotionEvent.TOOL_TYPE_STYLUS || toolType == MotionEvent.TOOL_TYPE_ERASER
+        val isStylus = event.getToolType(0).let {
+            it == MotionEvent.TOOL_TYPE_STYLUS || it == MotionEvent.TOOL_TYPE_ERASER
+        }
         downTimeMs = event.eventTime
         pendingModifier = detectStrokeModifier(event)
         val worldPt = vp.screenToWorld(Offset(event.x, event.y))
@@ -361,8 +362,7 @@ class CanvasTouchHandler(
 
     private fun flushPendingStroke(eventTime: Long) {
         Log.d(TAG, "  → debounce ended (${eventTime - downTimeMs}ms): flushing ${pendingMovePoints.size} pts")
-        val start = pendingMovePoints.removeAt(0)
-        viewModel.startStroke(start, pendingModifier)
+        viewModel.startStroke(pendingMovePoints.removeAt(0), pendingModifier)
         for (pt in pendingMovePoints) viewModel.updateStroke(pt)
         pendingMovePoints.clear()
         strokeInProgress = true
@@ -381,7 +381,6 @@ class CanvasTouchHandler(
     }
 
     private fun onPointerUp(event: MotionEvent) {
-        val actionName = eventActionName(event.actionMasked)
         if (strokePending) {
             if (pendingMovePoints.size > 1) {
                 Log.d(TAG, "  → finger lifted before debounce: flushing ${pendingMovePoints.size} pts")
@@ -396,7 +395,7 @@ class CanvasTouchHandler(
             discardPendingStroke()
         }
         if (strokeInProgress) {
-            Log.d(TAG, "  → $actionName: stroke finished (ptr=#$activePointerId)")
+            Log.d(TAG, "  → ${eventActionName(event.actionMasked)}: stroke finished (ptr=#$activePointerId)")
             strokeInProgress = false
             activePointerId = -1
             viewModel.finishStroke()
