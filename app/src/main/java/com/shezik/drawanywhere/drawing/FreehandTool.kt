@@ -21,7 +21,9 @@ class FreehandTool(private val ctx: ToolContext) : StrokeTool {
     }
 
     override fun onMove(point: Offset) {
-        ctx.strokes.lastOrNull()?._points?.add(point)
+        val stroke = ctx.strokes.lastOrNull() ?: return
+        stroke._points.add(point)
+        stroke.modifiedAt = System.currentTimeMillis()
     }
 
     override fun onFinish() {

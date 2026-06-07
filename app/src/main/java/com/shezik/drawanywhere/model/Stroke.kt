@@ -13,6 +13,7 @@ data class Stroke(
     val alpha: Float,
     val penType: PenType = PenType.Pen,
     val createdAt: Long = System.currentTimeMillis(),
+    var modifiedAt: Long = createdAt,
 ) {
     val points: List<Offset> get() = _points
 

@@ -68,7 +68,7 @@ object LaserRenderer : Renderer {
 
     override fun render(stroke: Stroke, canvas: Canvas, paint: Paint, now: Long) {
         val ttl = stroke.penType.ttlMs
-        val elapsed = now - stroke.createdAt
+        val elapsed = now - stroke.modifiedAt
 
         val fade = if (ttl == null) 1f
             else if (elapsed > ttl) return

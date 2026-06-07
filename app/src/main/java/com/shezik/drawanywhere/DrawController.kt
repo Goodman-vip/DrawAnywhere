@@ -91,7 +91,7 @@ class DrawController(initialConfig: PenConfig) {
         if (
             _strokeList.removeAll { stroke ->
                 val ttl = stroke.penType.ttlMs ?: return@removeAll false
-                now - stroke.createdAt > ttl
+                now - stroke.modifiedAt > ttl
             }
         ) notifyChanged()
     }
