@@ -104,6 +104,11 @@ class DrawViewModel(
     private val _lockMode = MutableStateFlow(LockMode.NONE)
     val lockMode: StateFlow<LockMode> = _lockMode.asStateFlow()
 
+    private val _dismissTarget = MutableStateFlow<DismissTarget>(DismissTarget.Hidden)
+    val dismissTarget: StateFlow<DismissTarget> = _dismissTarget.asStateFlow()
+
+    var containsDismissTarget: ((Int, Int) -> Boolean)? = null
+
     val canUndo: StateFlow<Boolean> = controller.canUndo
     val canRedo: StateFlow<Boolean> = controller.canRedo
     val canClearCanvas: StateFlow<Boolean> = controller.canClearStrokes
@@ -325,10 +330,32 @@ class DrawViewModel(
         _viewport.value = _viewport.value.resetAt(screenCenter)
     }
 
-    fun quitApplication() {
+    fun onDismissDragStart() { _dismissTarget.value = DismissTarget.Visible(false) }
+
+    fun onDismissDragMove(fingerPosInToolbar: Offset) {
+        val pos = serviceState.value.toolbarPosition
+        val overlapping = containsDismissTarget?.invoke(
+            (pos.x + fingerPosInToolbar.x).toInt(),
+            (pos.y + fingerPosInToolbar.y).toInt()
+        ) ?: false
+        _dismissTarget.value = DismissTarget.Visible(overlapping)
+    }
+
+    /** @return false if the drag ended in a dismiss — caller should skip saving position. */
+    fun onDismissDragEnd(): Boolean {
+        val target = _dismissTarget.value
+        if (target is DismissTarget.Visible && target.overlapping) {
+            quitApplication(savePosition = false)
+            return false
+        }
+        _dismissTarget.value = DismissTarget.Hidden
+        return true
+    }
+
+    fun quitApplication(savePosition: Boolean = true) {
         viewModelScope.launch {
             preferencesManager.saveUiState(uiState.value)
-            preferencesManager.saveServiceState(serviceState.value)
+            if (savePosition) preferencesManager.saveServiceState(serviceState.value)
             stopService()
         }
     }

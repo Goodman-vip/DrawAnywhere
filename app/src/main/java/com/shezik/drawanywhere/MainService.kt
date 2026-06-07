@@ -58,6 +58,7 @@ class MainService : Service() {
     private lateinit var windowManager: WindowManager
     private lateinit var canvasView: NativeDrawCanvasView
     private lateinit var toolbarView: ComposeView
+    private lateinit var dismissTargetView: DismissTargetView
     private lateinit var preferencesManager: PreferencesManager
     private lateinit var viewModel: DrawViewModel
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -120,8 +121,27 @@ class MainService : Service() {
         applyToolbarPosition(toolbarParams, initialServiceState)
         // ---------------------------------------
 
+        // -------- Setup dismiss target (shown when dragging toolbar) --------
+        dismissTargetView = DismissTargetView(this)
+        viewModel.containsDismissTarget = { x, y -> dismissTargetView.containsScreenPoint(x, y) }
+        val dismissSize = (DismissTargetView.SIZE_DP * resources.displayMetrics.density).toInt()
+        val dismissParams = LayoutParams(
+            dismissSize, dismissSize,
+            LayoutParams.TYPE_APPLICATION_OVERLAY,
+            LayoutParams.FLAG_NOT_FOCUSABLE or
+                    LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            y = (-16 * resources.displayMetrics.density).toInt()
+        }
+        dismissTargetView.visibility = View.GONE
+        // --------------------------------------------------------------------
+
         windowManager.addView(canvasView, canvasParams)
         windowManager.addView(toolbarView, toolbarParams)
+        windowManager.addView(dismissTargetView, dismissParams)
 
         // Defer toolbar position validation until layout is complete
         toolbarView.post {
@@ -149,6 +169,19 @@ class MainService : Service() {
                     .alpha(targetAlpha)
                     .setDuration(DrawViewModel.TOOLBAR_DIM_DURATION_MS)
                     .start()
+            }
+        }
+
+        // Observe dismiss target
+        serviceScope.launch {
+            viewModel.dismissTarget.collect { target ->
+                when (target) {
+                    is DismissTarget.Hidden -> dismissTargetView.visibility = View.GONE
+                    is DismissTarget.Visible -> {
+                        dismissTargetView.overlapping = target.overlapping
+                        dismissTargetView.visibility = View.VISIBLE
+                    }
+                }
             }
         }
 
@@ -193,6 +226,8 @@ class MainService : Service() {
             windowManager.removeView(toolbarView)
         if (::canvasView.isInitialized && canvasView.isAttachedToWindow)
             windowManager.removeView(canvasView)
+        if (::dismissTargetView.isInitialized && dismissTargetView.isAttachedToWindow)
+            windowManager.removeView(dismissTargetView)
         toolbarLifecycleOwner.stop()
     }
 

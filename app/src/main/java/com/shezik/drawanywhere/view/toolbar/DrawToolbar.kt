@@ -81,7 +81,10 @@ fun DrawToolbar(
                 haptics = haptics,
                 onPositionChange = viewModel::updateToolbarPosition,
                 onPositionSaved = viewModel::saveToolbarPosition,
-                onToolbarInteracted = viewModel::resetToolbarTimer
+                onToolbarInteracted = viewModel::resetToolbarTimer,
+                onDragStart = viewModel::onDismissDragStart,
+                onDragPosition = viewModel::onDismissDragMove,
+                onDragEnd = viewModel::onDismissDragEnd,
             ) {
                 ToolbarButtonsContainer(
                     modifier = Modifier.padding(Spacing.sm),

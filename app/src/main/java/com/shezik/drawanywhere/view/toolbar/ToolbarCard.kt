@@ -21,6 +21,9 @@ fun DraggableToolbarCard(
     onPositionChange: (Offset) -> Unit,
     onPositionSaved: () -> Unit,
     onToolbarInteracted: () -> Unit,
+    onDragStart: (() -> Unit)? = null,
+    onDragPosition: ((Offset) -> Unit)? = null,
+    onDragEnd: (() -> Boolean)? = null,
     content: @Composable () -> Unit
 ) {
     Card(
@@ -36,12 +39,19 @@ fun DraggableToolbarCard(
             }
             .pointerInput(Unit) {
                 detectDragGesturesAfterLongPress(
-                    onDragStart = { haptics.performHapticFeedback(HapticFeedbackType.LongPress) },
+                    onDragStart = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onDragStart?.invoke()
+                    },
                     onDrag = { change, dragAmount ->
                         change.consume()
                         onPositionChange(dragAmount)
+                        onDragPosition?.invoke(change.position)
                     },
-                    onDragEnd = { onPositionSaved() }
+                    onDragEnd = {
+                        val shouldSave = onDragEnd?.invoke() ?: true
+                        if (shouldSave) onPositionSaved()
+                    }
                 )
             },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
