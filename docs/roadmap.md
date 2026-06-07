@@ -60,6 +60,7 @@
 
 ### 像素橡皮扩展
 - [ ] 支持 Rectangle / Ellipse（边缘轮廓采样）
+- 已知限制：只擦 Pen stroke（Rectangle / Ellipse / Laser 不受影响）；点密度不足时残留碎片
 
 ### 待修（低优先级）
 - [ ] `ToolbarLifecycleOwner` 补齐 ON_START / ON_RESUME 生命周期回调（当前无 Observer，无实际影响）
