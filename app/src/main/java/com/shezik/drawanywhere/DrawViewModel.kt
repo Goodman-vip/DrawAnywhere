@@ -334,17 +334,17 @@ class DrawViewModel(
 
     fun onDismissDragMove(fingerPosInToolbar: Offset) {
         val pos = serviceState.value.toolbarPosition
-        val overlapping = containsDismissTarget?.invoke(
+        val active = containsDismissTarget?.invoke(
             (pos.x + fingerPosInToolbar.x).toInt(),
             (pos.y + fingerPosInToolbar.y).toInt()
         ) ?: false
-        _dismissTarget.value = DismissTarget.Visible(overlapping)
+        _dismissTarget.value = DismissTarget.Visible(active)
     }
 
     /** @return false if the drag ended in a dismiss — caller should skip saving position. */
     fun onDismissDragEnd(): Boolean {
         val target = _dismissTarget.value
-        if (target is DismissTarget.Visible && target.overlapping) {
+        if (target is DismissTarget.Visible && target.active) {
             quitApplication(savePosition = false)
             return false
         }
@@ -363,5 +363,5 @@ class DrawViewModel(
 
 sealed class DismissTarget {
     object Hidden : DismissTarget()
-    data class Visible(val overlapping: Boolean) : DismissTarget()
+    data class Visible(val active: Boolean) : DismissTarget()
 }

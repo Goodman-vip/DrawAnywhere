@@ -178,10 +178,10 @@ class MainService : Service() {
         serviceScope.launch {
             viewModel.dismissTarget.collect { target ->
                 when (target) {
-                    is DismissTarget.Hidden -> dismissTargetView.visibility = View.GONE
+                    is DismissTarget.Hidden -> dismissTargetView.hide()
                     is DismissTarget.Visible -> {
-                        dismissTargetView.overlapping = target.overlapping
-                        dismissTargetView.visibility = View.VISIBLE
+                        dismissTargetView.active = target.active
+                        dismissTargetView.show()
                     }
                 }
             }
