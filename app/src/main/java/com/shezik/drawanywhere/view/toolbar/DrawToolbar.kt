@@ -26,6 +26,8 @@ import com.shezik.drawanywhere.util.scrollFadingEdges
 import com.shezik.drawanywhere.ui.theme.DrawAnywhereTheme
 import com.shezik.drawanywhere.ui.theme.Spacing
 
+enum class ToolbarOrientation { HORIZONTAL, VERTICAL }
+
 @Composable
 fun DrawToolbar(
     viewModel: DrawViewModel,

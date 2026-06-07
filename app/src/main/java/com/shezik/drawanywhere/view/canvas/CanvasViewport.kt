@@ -3,6 +3,8 @@ package com.shezik.drawanywhere.view.canvas
 import androidx.compose.ui.geometry.Offset
 import kotlin.math.abs
 
+enum class LockMode { NONE, ZOOM, ALL }
+
 data class CanvasViewport(
     val zoom: Float = 1f,
     val panX: Float = 0f,

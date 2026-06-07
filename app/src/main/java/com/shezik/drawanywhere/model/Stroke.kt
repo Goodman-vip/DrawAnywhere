@@ -6,6 +6,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 
+enum class StrokeModifier {
+    None, PrimaryButton, SecondaryButton, Both
+}
+
 data class Stroke(
     internal val _points: MutableList<Offset> = mutableListOf(),
     val color: Color,

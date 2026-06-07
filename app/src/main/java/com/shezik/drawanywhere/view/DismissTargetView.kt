@@ -1,4 +1,4 @@
-package com.shezik.drawanywhere
+package com.shezik.drawanywhere.view
 
 import android.content.Context
 import android.graphics.Canvas

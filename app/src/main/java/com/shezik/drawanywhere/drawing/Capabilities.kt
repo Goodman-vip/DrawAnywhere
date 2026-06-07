@@ -76,16 +76,17 @@ object LaserRenderer : Renderer {
             else ((ttl - elapsed) / (ttl * (1f - FADE_START))).coerceIn(0f, 1f)
 
         val baseAlpha = paint.alpha.toFloat()
+        val path = PenRenderer.buildPath(stroke.points)
 
         // Glow: wider and dimmer, derived from the stroke's own color/alpha
         paint.strokeWidth = stroke.width * GLOW_WIDTH
         paint.alpha = (baseAlpha * GLOW_ALPHA * fade).toInt().coerceIn(0, 255)
-        canvas.drawPath(PenRenderer.buildPath(stroke.points), paint)
+        canvas.drawPath(path, paint)
 
         // Core: normal width, stroke's full alpha
         paint.strokeWidth = stroke.width
         paint.alpha = (baseAlpha * fade).toInt().coerceIn(0, 255)
-        canvas.drawPath(PenRenderer.buildPath(stroke.points), paint)
+        canvas.drawPath(path, paint)
     }
 }
 

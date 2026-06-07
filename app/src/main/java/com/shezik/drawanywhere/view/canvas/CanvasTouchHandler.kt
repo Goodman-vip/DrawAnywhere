@@ -40,7 +40,6 @@ internal data class HoverState(
     val fadeMs: Long = HOVER_FADE_MS,
 ) {
     val isFading: Boolean get() = fadeStartTimeMs > 0L
-    val isVisible: Boolean get() = !isFading || fadeMs > 0L
 }
 
 /**
