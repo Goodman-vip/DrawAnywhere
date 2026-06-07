@@ -136,7 +136,7 @@ class MainService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-            y = (-16 * resources.displayMetrics.density).toInt()
+            y = (DismissTargetView.BOTTOM_OFFSET_DP * resources.displayMetrics.density).toInt()
         }
         dismissTargetView.visibility = View.GONE
         // --------------------------------------------------------------------

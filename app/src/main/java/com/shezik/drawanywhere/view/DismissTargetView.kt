@@ -12,6 +12,7 @@ class DismissTargetView(context: Context) : View(context) {
 
     companion object {
         const val SIZE_DP = 80f
+        const val BOTTOM_OFFSET_DP = 48f
         private const val ACTIVE_DURATION_MS = 150L
 
         private const val CIRCLE_IDLE = (0x99 shl 24) or 0x333333
