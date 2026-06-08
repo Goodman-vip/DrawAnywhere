@@ -1,0 +1,3 @@
+Drag toolbar to the bottom of the screen to close the app — a red X circle appears when you enter the dismiss zone.
+Laser pointer fade now measured from last stroke movement, staying bright while the pen is held down.
+Internal cleanup — merged tiny files, removed dead code, streamlined architecture.
