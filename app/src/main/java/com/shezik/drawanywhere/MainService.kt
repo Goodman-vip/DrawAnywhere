@@ -78,7 +78,8 @@ class MainService : Service() {
             preferencesManager = preferencesManager,
             initialUiState = initialUiState,
             initialServiceState = initialServiceState,
-            stopService = { stopSelf() }
+            stopService = { stopSelf() },
+            containsDismissTarget = { x, y -> dismissTargetView.containsScreenPoint(x, y) },
         )
 
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
@@ -125,7 +126,6 @@ class MainService : Service() {
 
         // -------- Setup dismiss target (shown when dragging toolbar) --------
         dismissTargetView = DismissTargetView(this)
-        viewModel.containsDismissTarget = { x, y -> dismissTargetView.containsScreenPoint(x, y) }
         val dismissSize = (DismissTargetView.SIZE_DP * resources.displayMetrics.density).toInt()
         val dismissParams = LayoutParams(
             dismissSize, dismissSize,

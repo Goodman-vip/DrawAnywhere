@@ -85,7 +85,8 @@ class DrawViewModel(
     private val preferencesManager: PreferencesManager,
     initialUiState: UiState,
     initialServiceState: ServiceState,
-    private val stopService: () -> Unit
+    private val stopService: () -> Unit,
+    private val containsDismissTarget: (Int, Int) -> Boolean,
 ) : ViewModel() {
     companion object {
         const val TOOLBAR_DIM_DELAY_MS = 3_000L
@@ -106,8 +107,6 @@ class DrawViewModel(
 
     private val _dismissTarget = MutableStateFlow<DismissTarget>(DismissTarget.Hidden)
     val dismissTarget: StateFlow<DismissTarget> = _dismissTarget.asStateFlow()
-
-    var containsDismissTarget: ((Int, Int) -> Boolean)? = null
 
     val canUndo: StateFlow<Boolean> = controller.canUndo
     val canRedo: StateFlow<Boolean> = controller.canRedo
@@ -334,10 +333,10 @@ class DrawViewModel(
 
     fun onDismissDragMove(fingerPosInToolbar: Offset) {
         val pos = serviceState.value.toolbarPosition
-        val active = containsDismissTarget?.invoke(
+        val active = containsDismissTarget(
             (pos.x + fingerPosInToolbar.x).toInt(),
             (pos.y + fingerPosInToolbar.y).toInt()
-        ) ?: false
+        )
         _dismissTarget.value = DismissTarget.Visible(active)
     }
 
