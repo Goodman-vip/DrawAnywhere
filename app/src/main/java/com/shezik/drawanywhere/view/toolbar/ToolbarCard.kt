@@ -51,6 +51,9 @@ fun DraggableToolbarCard(
                     onDragEnd = {
                         val shouldSave = onDragEnd?.invoke() ?: true
                         if (shouldSave) onPositionSaved()
+                    },
+                    onDragCancel = {
+                        onDragEnd?.invoke()
                     }
                 )
             },
